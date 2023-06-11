@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Video Timeline</title>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.25/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    .bg-navbar {
+      background-color: #0C5800 !important;
+    }
+    .form-container {
+      margin-bottom: 100px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-navbar">
+    <a class="navbar-brand" href="#">JMart</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Timeline</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Notifikasi</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">
+            <i class="fas fa-user"></i>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container mt-3">
+    <form id="video-form" style="margin-bottom: 50px;">
+      <h2>Timeline</h2><br>
+      <h6>Tambahkan Video</h6>
+      <div class="form-group">
+        <label for="video-file">Video File:</label>
+        <input type="file" class="form-control-file" id="video-file" accept="video/mp4, video/webm, video/ogg" required>
+      </div>
+      <div class="form-group">
+        <label for="video-description">Deskripsi:</label>
+        <textarea class="form-control" id="video-description" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Tambahkan Video</button>
+    </form>
+
+    <table id="video-table" class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th style="width: 30%;">Video</th>
+          <th>Deskripsi</th>
+          <th style="width: 20%;">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+  <script>
+    // Function to create a new video row
+    function createVideoRow(videoPath, videoDescription) {
+      const table = $('#video-table').DataTable();
+      table.row.add([
+        '<video controls width="320" height="240"><source src="' + videoPath + '" type="video/mp4"></video>',
+        videoDescription,
+        '<button onclick="editVideo(this)" class="btn btn-sm btn-primary">Edit</button> ' +
+        '<button onclick="deleteVideo(\'' + videoPath + '\')" class="btn btn-sm btn-danger">Delete</button>'
+      ]).draw();
+    }
+
+    // Function to load video data from timeline.json
+    function loadVideoData() {
+      fetch('timeline.json')
+        .then(response => response.json())
+        .then(data => {
+          const videos = data.videos;
+
+          videos.forEach(video => {
+            createVideoRow(video.videoPath, video.videoDescription);
+          });
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
+
+    // Function to add a new video
+    function addVideo(event) {
+      event.preventDefault();
+
+      const videoFileInput = document.getElementById('video-file');
+      const videoDescriptionInput = document.getElementById('video-description');
+
+      const videoFile = videoFileInput.files[0];
+      const videoDescription = videoDescriptionInput.value;
+
+      const videoPath = 'path/to/uploaded/video'; // Replace with the actual path of the uploaded video
+
+      createVideoRow(videoPath, videoDescription);
+
+      // Reset the form
+      videoFileInput.value = '';
+      videoDescriptionInput.value = '';
+    }
+
+    // Function to edit a video
+    function editVideo(button) {
+      const row = button.parentNode.parentNode;
+      const videoDescriptionCell = row.cells[1];
+      const currentDescription = videoDescriptionCell.innerHTML;
+
+      const descriptionForm = document.createElement('form');
+      const descriptionTextarea = document.createElement('textarea');
+      const saveButton = document.createElement('button');
+      const cancelButton = document.createElement('button');
+
+      descriptionTextarea.innerHTML = currentDescription;
+      saveButton.textContent = 'Save';
+      cancelButton.textContent = 'Cancel';
+
+      descriptionForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const newDescription = descriptionTextarea.value;
+        videoDescriptionCell.innerHTML = newDescription;
+        row.removeChild(descriptionForm);
+
+        // Update the description in the JSON data (assuming timeline.json is used as the data source)
+        // ...
+      });
+
+      cancelButton.addEventListener('click', function () {
+        row.removeChild(descriptionForm);
+      });
+
+      descriptionForm.appendChild(descriptionTextarea);
+      descriptionForm.appendChild(saveButton);
+      descriptionForm.appendChild(cancelButton);
+
+      videoDescriptionCell.innerHTML = '';
+      videoDescriptionCell.appendChild(descriptionForm);
+    }
+
+    // Function to delete a video
+    function deleteVideo(videoPath) {
+      const confirmed = confirm('Are you sure you want to delete this video?');
+
+      if (confirmed) {
+        // Remove the video from the datatable
+        const table = $('#video-table').DataTable();
+        table.rows().eq(0).each(function (index) {
+          const row = table.row(index);
+          const rowData = row.data();
+          if (rowData[0].includes(videoPath)) {
+            row.remove().draw();
+            return false;
+          }
+        });
+
+        // Delete the video from the JSON data (assuming timeline.json is used as the data source)
+        // ...
+      }
+    }
+
+    // Initialize the DataTable and load video data
+    $(document).ready(function () {
+      $('#video-table').DataTable();
+      loadVideoData();
+    });
+
+    // Add event listener to the form submission
+    const videoForm = document.getElementById('video-form');
+    videoForm.addEventListener('submit', addVideo);
+  </script>
+</body>
+</html>
